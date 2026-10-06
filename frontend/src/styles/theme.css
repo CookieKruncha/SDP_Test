@@ -509,6 +509,12 @@ input[type="file"]::file-selector-button {
   font-weight: 600;
 }
 
+.table-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
 /* --- Filters & author merge ------------------------------------------ */
 
 .filters-row {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { reposApi } from "../api/client.js";
+import { downloadCsv, toCsv } from "../utils/csv.js";
 
 /** File/directory/repository metrics table for one ingested repository,
  * filterable by author / committer-date window / path, plus a manual
@@ -345,8 +346,32 @@ function MetricsTable({ objects, filter }) {
     ? objects.filter((o) => (o.path || "/").toLowerCase().includes(needle))
     : objects;
 
+  function exportCsv() {
+    const csv = toCsv(
+      ["type", "path", "added", "removed", "growth", "churn", "modifications", "modification_frequency", "churn_rate"],
+      rows.map((o) => [
+        o.type,
+        o.path || "/",
+        o.added,
+        o.removed,
+        o.growth,
+        o.churn,
+        o.modifications,
+        o.modification_frequency.toFixed(6),
+        o.churn_rate.toFixed(6),
+      ])
+    );
+    downloadCsv("metrics.csv", csv);
+  }
+
   return (
-    <table className="metrics-table">
+    <>
+      <div className="table-toolbar">
+        <button type="button" className="btn ghost" onClick={exportCsv} disabled={rows.length === 0}>
+          Export CSV
+        </button>
+      </div>
+      <table className="metrics-table">
       <thead>
         <tr>
           <th>Type</th>
@@ -383,6 +408,7 @@ function MetricsTable({ objects, filter }) {
         )}
       </tbody>
     </table>
+    </>
   );
 }
 

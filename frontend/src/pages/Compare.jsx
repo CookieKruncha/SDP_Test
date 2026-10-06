@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { reposApi } from "../api/client.js";
+import { downloadCsv, toCsv } from "../utils/csv.js";
 
 /** Side-by-side comparison of 2+ ingested repositories, using the same
  * per-repo metrics endpoint as the detail page (one call per selected repo,
@@ -219,8 +220,26 @@ function FileCompareTable({ repos, selectedIds, byRepo, pathFilter }) {
     return obj;
   }
 
+  function exportCsv() {
+    const headers = ["path", ...selectedIds.flatMap((id) => [`${nameOf(id)} churn`, `${nameOf(id)} modifications`])];
+    const rows = allPaths.map(({ path }) => [
+      path || "/",
+      ...selectedIds.flatMap((id) => {
+        const obj = cell(id, path);
+        return [obj ? obj.churn : "", obj ? obj.modifications : ""];
+      }),
+    ]);
+    downloadCsv("compare.csv", toCsv(headers, rows));
+  }
+
   return (
-    <table className="metrics-table compare-table">
+    <>
+      <div className="table-toolbar">
+        <button type="button" className="btn ghost" onClick={exportCsv} disabled={allPaths.length === 0}>
+          Export CSV
+        </button>
+      </div>
+      <table className="metrics-table compare-table">
       <thead>
         <tr>
           <th rowSpan={2} className="compare-row-label">
@@ -265,6 +284,7 @@ function FileCompareTable({ repos, selectedIds, byRepo, pathFilter }) {
         )}
       </tbody>
     </table>
+    </>
   );
 }
 
