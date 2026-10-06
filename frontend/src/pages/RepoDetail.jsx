@@ -71,6 +71,8 @@ export default function RepoDetail() {
             }}
           />
 
+          {!loading && <Charts objects={data.objects} />}
+
           <section className="card">
             {loading ? (
               <p className="muted">Updating…</p>
@@ -239,6 +241,102 @@ function AuthorMerge({ repoId, groups, onChanged }) {
       )}
     </section>
   );
+}
+
+function Charts({ objects }) {
+  const files = objects
+    .filter((o) => o.type === "file" && o.churn > 0)
+    .sort((a, b) => b.churn - a.churn)
+    .slice(0, 8);
+  const maxChurn = Math.max(1, ...files.map((f) => f.churn));
+
+  const root = objects.find((o) => o.type === "repository");
+  const authors = (root?.authors ?? [])
+    .filter((a) => a.ownership > 0)
+    .sort((a, b) => b.ownership - a.ownership);
+
+  if (files.length === 0 && authors.length === 0) return null;
+
+  return (
+    <div className="chart-grid">
+      {files.length > 0 && (
+        <section className="card chart-card">
+          <h3>Top files by churn</h3>
+          <div className="bar-chart">
+            {files.map((f) => (
+              <div className="bar-row" key={f.path}>
+                <span className="bar-label mono" title={f.path}>
+                  {f.path.split("/").pop()}
+                </span>
+                <div className="bar-track">
+                  <div
+                    className="bar-fill"
+                    style={{ width: `${(f.churn / maxChurn) * 100}%` }}
+                  />
+                </div>
+                <span className="bar-value">{f.churn}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {authors.length > 0 && (
+        <section className="card chart-card">
+          <h3>Repository ownership by author</h3>
+          <div className="donut-row">
+            <Donut slices={authors.map((a) => a.ownership)} />
+            <ul className="legend">
+              {authors.map((a, i) => (
+                <li key={a.author} className="legend-item">
+                  <span
+                    className="legend-swatch"
+                    style={{ background: sliceColor(i) }}
+                  />
+                  <span className="mono">{a.author}</span>
+                  <span className="muted small">
+                    {(a.ownership * 100).toFixed(1)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function Donut({ slices }) {
+  const total = slices.reduce((s, v) => s + v, 0) || 1;
+  let acc = 0;
+  const stops = slices.map((v, i) => {
+    const start = (acc / total) * 100;
+    acc += v;
+    const end = (acc / total) * 100;
+    return `${sliceColor(i)} ${start}% ${end}%`;
+  });
+  return (
+    <div
+      className="donut"
+      style={{ background: `conic-gradient(${stops.join(", ")})` }}
+    />
+  );
+}
+
+const SLICE_COLORS = [
+  "#4f8cff",
+  "#3fb950",
+  "#d29922",
+  "#f85149",
+  "#a371f7",
+  "#39c5cf",
+  "#db61a2",
+  "#8b949e",
+];
+
+function sliceColor(i) {
+  return SLICE_COLORS[i % SLICE_COLORS.length];
 }
 
 function MetricsTable({ objects, filter }) {
