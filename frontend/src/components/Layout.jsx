@@ -13,6 +13,9 @@ export default function Layout() {
             <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
               Dashboard
             </NavLink>
+            <NavLink to="/compare" className={({ isActive }) => (isActive ? "active" : "")}>
+              Compare
+            </NavLink>
           </nav>
         </div>
       </header>
