@@ -60,3 +60,22 @@ export function apiPost(path, json) {
 export function apiDelete(path) {
   return request(path, { method: "DELETE" });
 }
+
+export function apiUpload(path, formData) {
+  // No explicit Content-Type: the browser must set the multipart boundary.
+  return request(path, { method: "POST", body: formData });
+}
+
+/** Thin wrappers for the repository registry endpoints. */
+export const reposApi = {
+  list: () => apiGet("/api/repos"),
+  get: (repoId) => apiGet(`/api/repos/${repoId}`),
+  createFromUrl: (url) => apiPost("/api/repos", { url }),
+  createFromFile: (file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return apiUpload("/api/repos", form);
+  },
+  remove: (repoId) => apiDelete(`/api/repos/${repoId}`),
+  job: (jobId) => apiGet(`/api/jobs/${jobId}`),
+};

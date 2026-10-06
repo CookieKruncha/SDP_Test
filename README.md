@@ -44,17 +44,24 @@ pip install -r requirements-dev.txt
 pytest                        # runs the test suite in tests/
 ```
 
+`python run.py` deliberately runs without the Werkzeug auto-reloader — the
+reloader watches the whole project tree (including `instance/`, where
+ingestion writes files), and a reload would kill in-flight ingest jobs. Set
+`RAT_DEBUG=1` for the interactive debugger (the reloader stays off).
+
 ## Project status
 
-Stage 1 of 10 (foundation and skeleton) — see the build plan for the staged
-roadmap: ingestion, metric engine, query layer, filtering, author merging,
-multi-repo support, visualisation, performance, and hardening.
+Stage 2 of 10 (ingestion and repository registry) complete: repositories are
+added by zip upload or mirror clone and run as background jobs with progress
+polling; the dashboard lists repos with status, progress and commit counts.
+Remaining roadmap (see the build plan): metric engine, query layer, filtering,
+author merging, multi-repo support, visualisation, performance, hardening.
 
 ## Project layout
 
 ```
 app/                  Flask application (factory, routes, services)
-app/services/         ingestion, analysis, queries, authors, jobs (later stages)
+app/services/         ingestion, registry, jobs (analysis/queries/authors later)
 frontend/             React SPA (Vite)
 tests/                pytest suite, incl. deterministic fixture repos
 instance/             runtime data: cloned repos, uploads, SQLite cache (git-ignored)

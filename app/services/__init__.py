@@ -1,6 +1,10 @@
 """Service layer: ingestion, analysis, queries, authors, jobs.
 
-Modules are populated in later stages of the build plan. The rule that keeps
-metrics trustworthy: metric computation and the query layer are pure over the
-SQLite cache, and the UI only ever talks to the REST API.
+Present (Stage 2): ``gitcmd`` (the single git CLI wrapper), ``jobs``
+(background runner + progress), ``registry`` (repos table), ``ingest``
+(zip/URL ingestion). The analyzer and query layer arrive in Stages 3-4.
+
+The rule that keeps metrics trustworthy: metric computation and the query
+layer are pure over the SQLite cache, and the UI only ever talks to the
+REST API.
 """
