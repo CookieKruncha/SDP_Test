@@ -9,6 +9,7 @@ everywhere:
   instead of hanging on a terminal prompt;
 - stderr is always captured for error reporting.
 """
+
 from __future__ import annotations
 
 import os

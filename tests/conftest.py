@@ -1,4 +1,5 @@
 """Shared pytest fixtures, including a deterministic fixture-repository builder."""
+
 from __future__ import annotations
 
 import os
@@ -97,7 +98,9 @@ def build_fixture_repo(root: Path) -> GitRepo:
     repo = GitRepo(root)
 
     repo.write("README.md", "# Fixture\n")
-    repo.write("src/main.py", "print('one')\nprint('two')\nprint('three')\nprint('four')\n")
+    repo.write(
+        "src/main.py", "print('one')\nprint('two')\nprint('three')\nprint('four')\n"
+    )
     repo.write("bin/run.sh", "#!/bin/sh\necho run\n")
     repo.commit("initial import", T0, identity=ALICE)
 
@@ -137,7 +140,15 @@ def build_fixture_repo(root: Path) -> GitRepo:
         "print('four')\nprint('five')\nprint('six')\n",
     )
     repo.commit("extend main on main", T0 + 800, identity=CAROL)
-    repo.run("merge", "--no-ff", "feature", "-m", "merge feature", when=T0 + 900, identity=CAROL)
+    repo.run(
+        "merge",
+        "--no-ff",
+        "feature",
+        "-m",
+        "merge feature",
+        when=T0 + 900,
+        identity=CAROL,
+    )
     repo.commits["merge feature"] = repo.run("rev-parse", "HEAD").strip()
     return repo
 

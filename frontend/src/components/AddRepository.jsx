@@ -107,8 +107,9 @@ export default function AddRepository({ onAdded }) {
         </p>
       )}
       <p className="muted hint">
-        Clones are full mirrors and stay on disk; large repositories ingest in
-        the background while this page keeps working.
+        Zip uploads are capped at 512 MB. Clones are full mirrors and stay on
+        disk; large repositories ingest in the background while this page keeps
+        working.
       </p>
     </section>
   );

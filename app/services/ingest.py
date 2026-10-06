@@ -12,6 +12,7 @@ Invariants (relied on by every later stage):
 - git never prompts for credentials (see :mod:`app.services.gitcmd`), so
   auth/network failures surface as friendly job errors instead of hanging.
 """
+
 from __future__ import annotations
 
 import re
@@ -137,7 +138,9 @@ def stage_upload(file_storage, uploads_dir: Path, staging_id: str) -> Path:
     try:
         file_storage.save(staging)
     except OSError as exc:
-        raise IngestError(f"The upload could not be stored on disk: {exc}", "disk_error") from exc
+        raise IngestError(
+            f"The upload could not be stored on disk: {exc}", "disk_error"
+        ) from exc
 
     try:
         _validate_staged_zip(staging)
@@ -183,7 +186,9 @@ def _validate_staged_zip(staging: Path) -> None:
 # --- Background tasks -------------------------------------------------------
 
 
-def run_upload_task(ctx: IngestContext, repo_id: str, staging_zip: Path, reporter) -> None:
+def run_upload_task(
+    ctx: IngestContext, repo_id: str, staging_zip: Path, reporter
+) -> None:
     """Extract + validate an uploaded archive; marks the repo ready on success."""
     dest = Path(ctx.repos_dir) / repo_id
     try:
@@ -203,13 +208,17 @@ def run_upload_task(ctx: IngestContext, repo_id: str, staging_zip: Path, reporte
         raise
     except OSError as exc:
         _cleanup_dir(dest, ctx.repos_dir)
-        raise IngestError(f"Ingestion failed with a filesystem error: {exc}", "disk_error") from exc
+        raise IngestError(
+            f"Ingestion failed with a filesystem error: {exc}", "disk_error"
+        ) from exc
     finally:
         try:
             Path(staging_zip).unlink(missing_ok=True)
         except OSError:
             pass
-    registry.update_repo(ctx.db_path, repo_id, status="ready", path=str(root), error=None, **info)
+    registry.update_repo(
+        ctx.db_path, repo_id, status="ready", path=str(root), error=None, **info
+    )
 
 
 def run_clone_task(ctx: IngestContext, repo_id: str, url: str, reporter) -> None:
@@ -224,8 +233,12 @@ def run_clone_task(ctx: IngestContext, repo_id: str, url: str, reporter) -> None
         raise
     except OSError as exc:
         _cleanup_dir(dest, ctx.repos_dir)
-        raise IngestError(f"Ingestion failed with a filesystem error: {exc}", "disk_error") from exc
-    registry.update_repo(ctx.db_path, repo_id, status="ready", path=str(dest), error=None, **info)
+        raise IngestError(
+            f"Ingestion failed with a filesystem error: {exc}", "disk_error"
+        ) from exc
+    registry.update_repo(
+        ctx.db_path, repo_id, status="ready", path=str(dest), error=None, **info
+    )
 
 
 # --- Implementation helpers --------------------------------------------------

@@ -1,4 +1,5 @@
 """URL-clone ingestion: source validation (sync) and mirror-clone outcomes."""
+
 from __future__ import annotations
 
 import subprocess
@@ -105,7 +106,9 @@ def test_validate_url_accepts_common_forms():
 
 
 def test_repo_name_derivation():
-    assert ingest.repo_name_from_url("https://github.com/DaveGamble/cJSON.git") == "cJSON"
+    assert (
+        ingest.repo_name_from_url("https://github.com/DaveGamble/cJSON.git") == "cJSON"
+    )
     assert ingest.repo_name_from_url("git@github.com:owner/repo.git") == "repo"
     assert ingest.repo_name_from_url("https://host/") == "host"
     assert ingest.repo_name_from_filename("my-repo.zip") == "my-repo"

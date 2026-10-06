@@ -3,6 +3,7 @@
 Every read returns the repo row plus its latest ingest job (nested as
 ``job``), which is what the UI polls for progress/status.
 """
+
 from __future__ import annotations
 
 import time

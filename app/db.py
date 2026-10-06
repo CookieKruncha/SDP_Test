@@ -8,6 +8,7 @@ and recreates them, instead of running migrations.
 Metric-cache tables (commits, changes, authors) arrive with the analyzer in
 Stage 3; they will be added to ``_SCHEMA`` here.
 """
+
 from __future__ import annotations
 
 import sqlite3

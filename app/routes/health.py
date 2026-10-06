@@ -1,4 +1,5 @@
 """Health and diagnostic endpoints."""
+
 from flask import Blueprint, current_app
 
 bp = Blueprint("health", __name__, url_prefix="/api")

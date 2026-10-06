@@ -1,4 +1,5 @@
 """RAT — Repository Analysis Tool: Flask application factory."""
+
 from pathlib import Path
 
 from flask import Flask
@@ -41,6 +42,8 @@ def _ensure_instance_dirs(app):
 
 def _recover_interrupted_jobs(app):
     """Fail ingest rows that a previous server process left mid-flight."""
-    count = jobs.recover_interrupted_jobs(app.config["DATABASE_PATH"])
+    count = jobs.recover_interrupted_jobs(
+        app.config["DATABASE_PATH"], app.config["REPOS_DIR"], app.config["UPLOADS_DIR"]
+    )
     if count:
         app.logger.warning("Recovered %d interrupted ingest job(s) as failed", count)

@@ -1,4 +1,5 @@
 """Shared helpers for the ingestion/registry tests (zips, polling, clones)."""
+
 from __future__ import annotations
 
 import subprocess

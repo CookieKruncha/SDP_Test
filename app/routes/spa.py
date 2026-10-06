@@ -5,6 +5,7 @@ Routing rules:
 - Unknown non-API paths fall back to index.html so client-side routes work.
 - /api/* is never captured here; unmatched API paths 404 as JSON.
 """
+
 from pathlib import Path
 
 from flask import abort, current_app, send_from_directory

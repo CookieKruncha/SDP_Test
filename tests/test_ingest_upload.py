@@ -1,4 +1,5 @@
 """Zip-upload ingestion: validation, zip-slip safety, extraction, readiness."""
+
 from __future__ import annotations
 
 import shutil
@@ -7,7 +8,14 @@ from pathlib import Path
 
 from app.services import ingest
 
-from helpers import craft_zip, git, post_upload, wait_for_job, wait_for_repo, zip_directory
+from helpers import (
+    craft_zip,
+    git,
+    post_upload,
+    wait_for_job,
+    wait_for_repo,
+    zip_directory,
+)
 
 
 def _ingest_ok(client, zip_path: Path):

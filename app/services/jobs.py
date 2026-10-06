@@ -9,12 +9,15 @@ Contract for tasks passed to :func:`run_async`:
 - failures raise an exception whose message is friendly (``IngestError``);
   the runner then marks both the job and the repo as ``failed``.
 """
+
 from __future__ import annotations
 
 import logging
+import shutil
 import threading
 import time
 import uuid
+from pathlib import Path
 
 from .. import db
 from . import registry
@@ -68,7 +71,9 @@ def update_job(
     fields["updated_at"] = int(time.time())
     columns = ", ".join(f"{key} = ?" for key in fields)
     db.execute(
-        db_path, f"UPDATE ingest_jobs SET {columns} WHERE id = ?", (*fields.values(), job_id)
+        db_path,
+        f"UPDATE ingest_jobs SET {columns} WHERE id = ?",
+        (*fields.values(), job_id),
     )
 
 
@@ -128,17 +133,22 @@ def run_async(db_path, job_id: str, repo_id: str, task) -> None:
 
 RECOVERY_MESSAGE = (
     "Ingestion was interrupted by a server restart. "
-    "Remove this repository and add it again."
+    "Any partial files were cleaned up; remove this entry and add it again."
 )
 
 
-def recover_interrupted_jobs(db_path) -> int:
+def recover_interrupted_jobs(db_path, repos_dir=None, uploads_dir=None) -> int:
     """Fail jobs left mid-flight by a previous process, and return how many.
 
     Worker threads are daemons: if the process dies (crash, reloader restart,
     Ctrl+C), rows can stay ``pending``/``running`` forever with nobody left to
     finish them. Called once at startup. A repo whose task had already reached
     ``ready`` is left untouched; one that never got there is marked failed.
+
+    When runtime directories are provided, partial repo dirs and staged upload
+    zips are removed with strict path guards. Only ``repos/<repo_id>`` and
+    ``uploads/<repo_id>.zip`` are eligible, so a corrupt DB row cannot point
+    cleanup at arbitrary files.
     """
     stale = db.query_all(
         db_path,
@@ -149,7 +159,39 @@ def recover_interrupted_jobs(db_path) -> int:
         update_job(db_path, row["id"], status="failed", message=RECOVERY_MESSAGE)
         repo = registry.get_repo(db_path, row["repo_id"])
         if repo is not None and repo["status"] in ACTIVE_STATUSES:
+            _cleanup_recovered_paths(repo, repos_dir, uploads_dir)
             registry.update_repo(
                 db_path, row["repo_id"], status="failed", error=RECOVERY_MESSAGE
             )
     return len(stale)
+
+
+def _cleanup_recovered_paths(repo: dict, repos_dir, uploads_dir) -> None:
+    repo_id = repo["id"]
+    if repos_dir is not None:
+        try:
+            root = Path(repos_dir).resolve()
+            expected = (root / repo_id).resolve()
+            registered = Path(repo["path"]).resolve() if repo.get("path") else expected
+            if (
+                registered == expected
+                and expected != root
+                and expected.is_relative_to(root)
+            ):
+                shutil.rmtree(expected, ignore_errors=True)
+        except OSError:  # pragma: no cover — best-effort startup cleanup
+            log.warning(
+                "Could not clean interrupted repo directory for %s",
+                repo_id,
+                exc_info=True,
+            )
+    if uploads_dir is not None:
+        try:
+            root = Path(uploads_dir).resolve()
+            staged = (root / f"{repo_id}.zip").resolve()
+            if staged != root and staged.is_relative_to(root):
+                staged.unlink(missing_ok=True)
+        except OSError:  # pragma: no cover — best-effort startup cleanup
+            log.warning(
+                "Could not clean interrupted upload for %s", repo_id, exc_info=True
+            )

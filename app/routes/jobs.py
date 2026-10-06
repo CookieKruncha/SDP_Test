@@ -1,4 +1,5 @@
 """Ingest job status API (polled by the UI for progress and outcomes)."""
+
 from __future__ import annotations
 
 from flask import Blueprint, current_app, jsonify

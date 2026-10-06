@@ -1,4 +1,5 @@
 """Registry API: list/detail/delete semantics, job lifecycle, request validation."""
+
 from __future__ import annotations
 
 import subprocess
@@ -138,24 +139,41 @@ def test_post_accepts_form_encoded_url(client, fixture_repo, tmp_path):
     assert job["status"] == "done", job["message"]
 
 
-def test_recover_interrupted_jobs_fails_stale_rows(app):
+def test_recover_interrupted_jobs_fails_stale_rows_and_cleans_files(app):
     db_path = app.config["DATABASE_PATH"]
+    repo_dir = Path(app.config["REPOS_DIR"]) / "stale-repo"
+    repo_dir.mkdir(parents=True)
+    (repo_dir / "partial.txt").write_text("incomplete")
+    upload_zip = Path(app.config["UPLOADS_DIR"]) / "stale-repo.zip"
+    upload_zip.write_bytes(b"partial upload")
     repo_id = registry.insert_repo(
         db_path,
         repo_id="stale-repo",
         name="stale",
         source_type="url",
         source="https://example.com/stale.git",
-        path="/nowhere",
+        path=repo_dir,
     )["id"]
     running_id = jobs.create_job(db_path, repo_id, "clone")["id"]
-    jobs.update_job(db_path, running_id, status="running", phase="cloning", progress=0.4)
+    jobs.update_job(
+        db_path, running_id, status="running", phase="cloning", progress=0.4
+    )
     pending_id = jobs.create_job(db_path, repo_id, "upload")["id"]
     done_id = jobs.create_job(db_path, repo_id, "clone")["id"]
     jobs.update_job(db_path, done_id, status="done", phase="finished", progress=1.0)
 
-    assert jobs.recover_interrupted_jobs(db_path) == 2
-    assert jobs.recover_interrupted_jobs(db_path) == 0  # idempotent
+    assert (
+        jobs.recover_interrupted_jobs(
+            db_path, app.config["REPOS_DIR"], app.config["UPLOADS_DIR"]
+        )
+        == 2
+    )
+    assert (
+        jobs.recover_interrupted_jobs(
+            db_path, app.config["REPOS_DIR"], app.config["UPLOADS_DIR"]
+        )
+        == 0
+    )  # idempotent
 
     for job_id in (running_id, pending_id):
         job = jobs.get_job(db_path, job_id)
@@ -165,19 +183,24 @@ def test_recover_interrupted_jobs_fails_stale_rows(app):
 
     repo = registry.get_repo(db_path, repo_id)
     assert repo["status"] == "failed"
-    assert "interrupted" in repo["error"].lower()
+    assert "partial files were cleaned up" in repo["error"].lower()
+    assert not repo_dir.exists()
+    assert not upload_zip.exists()
 
 
 def test_app_creation_recovers_jobs_left_running(app):
     """A restart (fresh create_app on the same DB) must unstick old rows."""
     db_path = app.config["DATABASE_PATH"]
+    repo_dir = Path(app.config["REPOS_DIR"]) / "interrupted-repo"
+    repo_dir.mkdir(parents=True)
+    (repo_dir / "partial.txt").write_text("incomplete")
     repo_id = registry.insert_repo(
         db_path,
         repo_id="interrupted-repo",
         name="interrupted",
         source_type="upload",
         source="demo.zip",
-        path="/nowhere",
+        path=repo_dir,
     )["id"]
     job_id = jobs.create_job(db_path, repo_id, "upload")["id"]
     jobs.update_job(db_path, job_id, status="running", phase="validating", progress=1.0)
@@ -192,3 +215,28 @@ def test_app_creation_recovers_jobs_left_running(app):
 
     assert jobs.get_job(db_path, job_id)["status"] == "failed"
     assert registry.get_repo(db_path, repo_id)["status"] == "failed"
+    assert not repo_dir.exists()
+
+
+def test_oversized_upload_returns_friendly_json(tmp_path):
+    oversized_app = create_app(
+        INSTANCE_DIR=tmp_path / "instance",
+        REPOS_DIR=tmp_path / "instance" / "repos",
+        UPLOADS_DIR=tmp_path / "instance" / "uploads",
+        DATABASE_PATH=tmp_path / "instance" / "rat.db",
+        MAX_CONTENT_LENGTH=64,
+        TESTING=True,
+    )
+    resp = oversized_app.test_client().post(
+        "/api/repos",
+        data={"file": (BytesIO(b"x" * 512), "too-big.zip")},
+        content_type="multipart/form-data",
+    )
+
+    assert resp.status_code == 413
+    assert resp.get_json() == {
+        "error": {
+            "code": "upload_too_large",
+            "message": "The uploaded file is too large (64 bytes max). Upload a smaller zip archive.",
+        }
+    }
