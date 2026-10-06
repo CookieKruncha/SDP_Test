@@ -60,12 +60,82 @@ def test_metrics_cached_between_requests(client, fixture_repo, tmp_path, monkeyp
     client.get(f"/api/repos/{repo_id}/metrics")
 
     calls = []
-    original = analyzer_module.analyze
+    original = analyzer_module.analyze_commits
 
     def spy(*args, **kwargs):
         calls.append(1)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(analyzer_module, "analyze", spy)
+    monkeypatch.setattr(analyzer_module, "analyze_commits", spy)
     client.get(f"/api/repos/{repo_id}/metrics")
     assert calls == []  # second request served from the in-process cache
+
+
+def test_metrics_filtered_by_committer_date_window(client, fixture_repo, tmp_path):
+    from tests.conftest import T0
+
+    repo_id = _ingest(client, fixture_repo, tmp_path)
+
+    early = client.get(f"/api/repos/{repo_id}/metrics", query_string={"until": T0 + 300}).get_json()
+    assert early["commit_count"] == 3  # T0, T0+100, T0+200 (all Alice)
+
+    late = client.get(f"/api/repos/{repo_id}/metrics", query_string={"since": T0 + 300}).get_json()
+    assert late["commit_count"] == 6  # T0+300..T0+800
+
+    window = client.get(
+        f"/api/repos/{repo_id}/metrics", query_string={"since": T0 + 300, "until": T0 + 500}
+    ).get_json()
+    assert window["commit_count"] == 2  # T0+300, T0+400 (half-open on 'until')
+
+
+def test_metrics_filtered_by_author(client, fixture_repo, tmp_path):
+    repo_id = _ingest(client, fixture_repo, tmp_path)
+    data = client.get(
+        f"/api/repos/{repo_id}/metrics",
+        query_string={"author": "Alice Dev <alice@example.com>"},
+    ).get_json()
+    assert data["commit_count"] == 4  # T0, T0+100, T0+200, T0+600 (mailmap-merged)
+
+
+def test_metrics_filtered_by_manual_commit_list(client, fixture_repo, tmp_path):
+    repo_id = _ingest(client, fixture_repo, tmp_path)
+    sha = fixture_repo.rev("delete run script")
+    data = client.get(
+        f"/api/repos/{repo_id}/metrics", query_string={"commits": sha}
+    ).get_json()
+    assert data["commit_count"] == 1
+
+
+def test_author_merge_and_split_roundtrip(client, fixture_repo, tmp_path):
+    repo_id = _ingest(client, fixture_repo, tmp_path)
+    bob = "Bob Builder <bob@example.com>"
+    carol = "Carol Coder <carol@example.com>"
+
+    groups_before = client.get(f"/api/repos/{repo_id}/authors").get_json()["groups"]
+    assert {g["canonical"] for g in groups_before} >= {bob, carol}
+
+    resp = client.post(
+        f"/api/repos/{repo_id}/authors/merge",
+        json={"authors": [bob, carol], "canonical": "Team X"},
+    )
+    assert resp.status_code == 200
+    groups = resp.get_json()["groups"]
+    merged = next(g for g in groups if g["canonical"] == "Team X")
+    assert sorted(merged["members"]) == sorted([bob, carol])
+
+    data = client.get(
+        f"/api/repos/{repo_id}/metrics", query_string={"author": "Team X"}
+    ).get_json()
+    assert data["commit_count"] == 5  # Bob's 3 + Carol's 2 non-merge commits
+
+    resp = client.post(f"/api/repos/{repo_id}/authors/split", json={"author": bob})
+    assert resp.status_code == 200
+    groups_after = resp.get_json()["groups"]
+    assert any(g["canonical"] == bob and g["members"] == [bob] for g in groups_after)
+
+
+def test_author_merge_requires_authors_and_canonical(client, fixture_repo, tmp_path):
+    repo_id = _ingest(client, fixture_repo, tmp_path)
+    resp = client.post(f"/api/repos/{repo_id}/authors/merge", json={"authors": []})
+    assert resp.status_code == 400
+    assert resp.get_json()["error"]["code"] == "invalid_request"

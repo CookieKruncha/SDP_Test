@@ -78,5 +78,10 @@ export const reposApi = {
   },
   remove: (repoId) => apiDelete(`/api/repos/${repoId}`),
   job: (jobId) => apiGet(`/api/jobs/${jobId}`),
-  metrics: (repoId) => apiGet(`/api/repos/${repoId}/metrics`),
+  metrics: (repoId, filters) => apiGet(`/api/repos/${repoId}/metrics`, filters),
+  authors: (repoId) => apiGet(`/api/repos/${repoId}/authors`),
+  mergeAuthors: (repoId, authors, canonical) =>
+    apiPost(`/api/repos/${repoId}/authors/merge`, { authors, canonical }),
+  splitAuthor: (repoId, author) =>
+    apiPost(`/api/repos/${repoId}/authors/split`, { author }),
 };

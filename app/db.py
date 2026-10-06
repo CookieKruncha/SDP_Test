@@ -47,6 +47,13 @@ CREATE TABLE ingest_jobs (
 );
 
 CREATE INDEX idx_ingest_jobs_repo ON ingest_jobs (repo_id);
+
+CREATE TABLE author_aliases (
+    repo_id             TEXT NOT NULL REFERENCES repos(id) ON DELETE CASCADE,
+    raw_author          TEXT NOT NULL,   -- mailmap-resolved "Name <email>" from git
+    canonical_author    TEXT NOT NULL,   -- manually merged display name
+    PRIMARY KEY (repo_id, raw_author)
+);
 """
 
 

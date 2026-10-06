@@ -508,3 +508,65 @@ input[type="file"]::file-selector-button {
   color: var(--muted);
   font-weight: 600;
 }
+
+/* --- Filters & author merge ------------------------------------------ */
+
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.filter-field .input {
+  margin-bottom: 0;
+}
+
+.author-groups {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.author-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.author-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.author-chip label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.btn.tiny {
+  padding: 2px 7px;
+  font-size: 12px;
+  line-height: 1;
+  border-radius: 999px;
+}

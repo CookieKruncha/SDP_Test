@@ -17,4 +17,4 @@ class Config:
 
     # --- Behaviour ------------------------------------------------------
     MAX_CONTENT_LENGTH = 512 * 1024 * 1024  # 512 MB cap for zip uploads
-    SCHEMA_VERSION = 2  # bump when the cache schema changes
+    SCHEMA_VERSION = 3  # bump when the cache schema changes
