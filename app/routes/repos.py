@@ -9,6 +9,7 @@
 Both forms start a background job and return ``202`` with the new repo and
 job; the UI then polls ``GET /api/jobs/<id>`` or ``GET /api/repos``.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -17,7 +18,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, jsonify, request
 
 from ..errors import ApiError
-from ..services import ingest, jobs, registry
+from ..services import ingest, jobs, metrics, registry
 
 bp = Blueprint("repos", __name__, url_prefix="/api/repos")
 
@@ -67,7 +68,9 @@ def create_repo():
             _db_path(),
             job["id"],
             repo_id,
-            task=lambda reporter: ingest.run_upload_task(ctx, repo_id, staging, reporter),
+            task=lambda reporter: ingest.run_upload_task(
+                ctx, repo_id, staging, reporter
+            ),
         )
     else:
         try:
@@ -122,6 +125,7 @@ def delete_repo(repo_id: str):
         )
     _remove_repo_dir(repo_id)
     registry.delete_repo(_db_path(), repo_id)
+    metrics.invalidate(repo_id)
     return "", 204
 
 

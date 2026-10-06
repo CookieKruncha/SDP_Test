@@ -78,4 +78,5 @@ export const reposApi = {
   },
   remove: (repoId) => apiDelete(`/api/repos/${repoId}`),
   job: (jobId) => apiGet(`/api/jobs/${jobId}`),
+  metrics: (repoId) => apiGet(`/api/repos/${repoId}/metrics`),
 };

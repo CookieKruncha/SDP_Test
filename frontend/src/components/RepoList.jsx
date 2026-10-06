@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { reposApi } from "../api/client.js";
 
@@ -103,22 +104,32 @@ function RepoCard({ repo, onChanged }) {
       {active && <Progress job={repo.job} />}
 
       {repo.status === "failed" && repo.error && (
-        <p className="form-error" role="alert">
-          {repo.error}
-        </p>
+        <div className="failure-block" role="alert">
+          <p className="form-error">{repo.error}</p>
+          <p className="muted small">
+            Remove this failed entry, then add the repository again to retry.
+          </p>
+        </div>
       )}
 
       <div className="repo-card-foot">
         <span className="muted small">Added {formatTime(repo.created_at)}</span>
-        <button
-          type="button"
-          className="btn ghost danger"
-          onClick={remove}
-          disabled={active || removing}
-          title={active ? "Wait for ingestion to finish before removing" : "Remove"}
-        >
-          {removing ? "Removing…" : "Remove"}
-        </button>
+        <div className="repo-card-actions">
+          {repo.status === "ready" && (
+            <Link className="btn ghost" to={`/repos/${repo.id}`}>
+              View metrics
+            </Link>
+          )}
+          <button
+            type="button"
+            className="btn ghost danger"
+            onClick={remove}
+            disabled={active || removing}
+            title={active ? "Wait for ingestion to finish before removing" : "Remove"}
+          >
+            {removing ? "Removing…" : repo.status === "failed" ? "Remove to retry" : "Remove"}
+          </button>
+        </div>
       </div>
       {removeError && (
         <p className="form-error" role="alert">
